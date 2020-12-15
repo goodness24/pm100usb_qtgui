@@ -1,5 +1,9 @@
 # ThorLabs PM100USB Frontend (Qt version)
 #  2020.12.7 v1.0 Goro Nishimura
+#       12.15 v1.01 change graph title,
+#                   start/stop button means recording now
+#                   The program is always showing the count rate
+#                   when it connects the device
 #
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -18,7 +22,7 @@ import ThorlabUSBTMC as thorlabs
 from ThorlabUSBTMC import list_thorlabs_devinfo
 import MeasureThorLabs as measThorlabs
 
-verinfo = 'pm100usb_qtgui (PyQt5) v1.0(20201207)'
+verinfo = 'pm100usb_qtgui (PyQt5) v1.01(20201215)'
 
 # PM100USB measurement event
 class UpDateEvent( QObject):
@@ -314,10 +318,12 @@ class PM100USB_Cont(QWidget):
 
     def onStartStop(self, event):
         if self.startstop_state=='0':
-            self.parent.startstop_pm100usb(True)
+#            self.parent.startstop_pm100usb(True)
+            self.parent.pm100usb.recording = True
             self.startstop('1')
         else:
-            self.parent.startstop_pm100usb(False)
+#            self.parent.startstop_pm100usb(False)
+            self.parent.pm100usb.recording = False
             self.startstop('0')
 
     def onClear(self, event):
@@ -330,12 +336,14 @@ class PM100USB_Cont(QWidget):
                                                'color: #00ff00;'
                                                '}')
             self.opencloseButton.setText('Close')
+            self.parent.startstop_pm100usb(True)
             self.open_state='1'
         else:
             self.opencloseButton.setStyleSheet('QPushButton {'
                                                'color: #ff0000;'
                                                '}')
             self.opencloseButton.setText('Connect')
+            self.parent.startstop_pm100usb(False)
             self.open_state='0'       
 
     def onOpenClose(self, event):
@@ -518,7 +526,6 @@ class GraphPanel(QWidget):
         self.figure = pg.PlotWidget(axisItems={'bottom': TimeAxisItem(orientation='bottom')})
 
         self.figure.setMouseEnabled(x=False, y=False)
-        self.figure.setTitle('PM100USB ('+self.parent.pm100usb.dev_name+')')
         self.figure.setLabel('left', 'Power (mW)')
         self.figure.setLabel('bottom', 'Time (H:M:S)')
         self.figure.setBackground('k')
@@ -570,6 +577,11 @@ class GraphPanel(QWidget):
     def upDate(self):
         self.draw()
 
+    def upDateTitle(self, isopen):
+        if isopen:
+            self.figure.setTitle('PM100USB ('+self.parent.pm100usb.dev_name+')')
+        else:
+            self.figure.setTitle('PM100USB')
         
 class MainFrame(QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -696,10 +708,12 @@ class MainFrame(QMainWindow):
         if openclose:
             if not self.pm100usb.active:
                 self.pm100usb.open(self.pm100usb.dev_name)
+                self.graphpanel.upDateTitle( True)
         else:
             self.pm100usb.stopMeasurement()
             if self.pm100usb.active:
                 self.pm100usb.close()
+                self.graphpanel.upDateTitle( False)
 
     def startstop_pm100usb( self, startstop):
         if startstop:
@@ -708,13 +722,19 @@ class MainFrame(QMainWindow):
             self.pm100usb.stopMeasurement()
 
     def onUpdate( self, value):
-        idx = value -1
-        data = [self.pm100usb.power[idx], \
+#            idx = value -1
+#            data = [self.pm100usb.power[idx], \
+#                    self.pm100usb.maxmin_power[0],\
+#                    self.pm100usb.maxmin_power[1],\
+#                    self.pm100usb.temp[idx]]
+#            self.contpanel.onUpdate( data)
+        data = [self.pm100usb.current_power,
                 self.pm100usb.maxmin_power[0],\
                 self.pm100usb.maxmin_power[1],\
-                self.pm100usb.temp[idx]]
+                self.pm100usb.current_temp]
         self.contpanel.onUpdate( data)
-        self.graphpanel.upDate()
+        if self.pm100usb.recording:
+            self.graphpanel.upDate()
             
 if __name__ == '__main__':
     app = QApplication(sys.argv)
