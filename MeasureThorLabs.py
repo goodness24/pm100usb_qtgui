@@ -1,6 +1,7 @@
 #  ThorLabs PM100USB Measurement Module
 #
 #  2020.11.27 v1.0 Goro Nishimura
+#       12.15 v1.01 add recording flag
 import time
 import threading
 import ThorlabUSBTMC as thorlabs
@@ -14,6 +15,7 @@ class PM100USB(thorlabs.pm100usb):
         self.maxmin_power = []
         self.period = 1.0     # seconds
         self.measurement = False
+        self.recording = False
         self.lock = threading.Lock()
         self.init_data()
 
@@ -28,6 +30,7 @@ class PM100USB(thorlabs.pm100usb):
             if self.measurement:
                 self.stopMeasurement()
             super().close()
+            self.recording = False
             self.measurement = False
 
     def measure(self):
@@ -36,11 +39,12 @@ class PM100USB(thorlabs.pm100usb):
             p *= 1000.0
             self.current_power = p
             self.current_temp = tmp
-            self.lock.acquire()
-            self.time.append(tim)
-            self.power.append(p)
-            self.temp.append(tmp)
-            self.lock.release()
+            if self.recording:
+                self.lock.acquire()
+                self.time.append(tim)
+                self.power.append(p)
+                self.temp.append(tmp)
+                self.lock.release()
                 
             if p<self.maxmin_power[0]: # check minimum
                 self.maxmin_power[0] = p
