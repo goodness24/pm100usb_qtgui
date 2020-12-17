@@ -1,5 +1,7 @@
 # Simple USBTMC interface using Linux Kernel USBTMC device
-#   I have added a routine to get usbtmc devices and information
+#   I firstly refered the ThorlabsPM100 routine at 
+#   https://pythonhosted.org/ThorlabsPM100/  by Pierre Clade.
+#   and have added a routine to get usbtmc devices and information
 #   v1.0 2020.11.25 Goro Nishimura
 #
 import os
